@@ -1,0 +1,408 @@
+// ============================================================
+// Project 6: Employee Engagement Segmentation Dashboard
+// Power BI DAX Measures — Engagement Audit
+//
+// Research foundation:
+//   Gallup Q12 Employee Engagement Survey
+//   Gallup State of the Global Workplace Report (2023)
+//     Engaged: 23% globally | Not Engaged: 59% | Actively Disengaged: 18%
+//     Manager quality explains 70% of team engagement variance.
+//
+// Usage: paste each measure into Power BI Desktop > Modeling > New Measure
+// Table: EngagementData (imported from engagement_data.csv or .xlsx)
+// ============================================================
+
+
+// ============================================================
+// PAGE 1: EXECUTIVE SUMMARY
+// Headline KPI cards — workforce-level engagement snapshot
+// ============================================================
+
+// Total headcount
+Total Headcount =
+COUNTROWS(EngagementData)
+
+
+// Overall average Q12 score
+Overall Avg Q12 =
+AVERAGE(EngagementData[avg_q12_score])
+
+
+// Engaged employee count
+Engaged Count =
+CALCULATE(
+    COUNTROWS(EngagementData),
+    EngagementData[engagement_segment] = "Engaged"
+)
+
+
+// Not Engaged employee count
+Not Engaged Count =
+CALCULATE(
+    COUNTROWS(EngagementData),
+    EngagementData[engagement_segment] = "Not Engaged"
+)
+
+
+// Actively Disengaged employee count
+Actively Disengaged Count =
+CALCULATE(
+    COUNTROWS(EngagementData),
+    EngagementData[engagement_segment] = "Actively Disengaged"
+)
+
+
+// Engaged percentage
+// Gallup 2023 global benchmark: 23%
+Engaged % =
+DIVIDE([Engaged Count], [Total Headcount]) * 100
+
+
+// Not Engaged percentage
+Not Engaged % =
+DIVIDE([Not Engaged Count], [Total Headcount]) * 100
+
+
+// Actively Disengaged percentage
+Actively Disengaged % =
+DIVIDE([Actively Disengaged Count], [Total Headcount]) * 100
+
+
+// Engagement rate vs. Gallup benchmark
+// Positive = above global benchmark (good), negative = below (at risk)
+Engagement Rate vs. Gallup Benchmark =
+[Engaged %] - 23.0
+
+
+// Total flight risk count
+Flight Risk Count =
+CALCULATE(
+    COUNTROWS(EngagementData),
+    EngagementData[flight_risk_flag] = 1
+)
+
+
+// Flight risk as % of workforce
+Flight Risk % =
+DIVIDE([Flight Risk Count], [Total Headcount]) * 100
+
+
+// Average absenteeism across all employees
+Avg Absence Days =
+AVERAGE(EngagementData[absence_days])
+
+
+// Average intent to stay (1-5)
+Avg Intent to Stay =
+AVERAGE(EngagementData[intent_to_stay])
+
+
+// ============================================================
+// PAGE 2: DEPARTMENT SEGMENTATION
+// Engagement breakdown and Q12 scores by department
+// ============================================================
+
+// Engaged % within selected department context
+Dept Engaged % =
+DIVIDE(
+    CALCULATE(
+        COUNTROWS(EngagementData),
+        EngagementData[engagement_segment] = "Engaged"
+    ),
+    CALCULATE(
+        COUNTROWS(EngagementData),
+        ALLSELECTED(EngagementData[department])
+    )
+) * 100
+
+
+// Average Q12 score by department — used in ranking bar chart
+Dept Avg Q12 =
+CALCULATE(
+    AVERAGE(EngagementData[avg_q12_score]),
+    ALLSELECTED(EngagementData[department])
+)
+
+
+// Department engagement rank (1 = lowest, useful for conditional formatting)
+Dept Engagement Rank =
+RANKX(
+    ALL(EngagementData[department]),
+    CALCULATE(AVERAGE(EngagementData[avg_q12_score])),
+    ,
+    ASC,
+    Dense
+)
+
+
+// Actively Disengaged % within department (priority intervention indicator)
+Dept Disengaged % =
+DIVIDE(
+    CALCULATE(
+        COUNTROWS(EngagementData),
+        EngagementData[engagement_segment] = "Actively Disengaged"
+    ),
+    COUNTROWS(EngagementData)
+) * 100
+
+
+// ============================================================
+// PAGE 3: Q12 ITEM ANALYSIS
+// Item-level heatmap — surfaces weakest engagement dimensions
+// ============================================================
+
+// Average score for each Q12 item
+Q01 Avg =
+AVERAGE(EngagementData[q01])
+
+Q02 Avg =
+AVERAGE(EngagementData[q02])
+
+Q03 Avg =
+AVERAGE(EngagementData[q03])
+
+Q04 Avg =
+AVERAGE(EngagementData[q04])
+
+Q05 Avg =
+AVERAGE(EngagementData[q05])
+
+Q06 Avg =
+AVERAGE(EngagementData[q06])
+
+Q07 Avg =
+AVERAGE(EngagementData[q07])
+
+Q08 Avg =
+AVERAGE(EngagementData[q08])
+
+Q09 Avg =
+AVERAGE(EngagementData[q09])
+
+Q10 Avg =
+AVERAGE(EngagementData[q10])
+
+Q11 Avg =
+AVERAGE(EngagementData[q11])
+
+Q12 Avg =
+AVERAGE(EngagementData[q12])
+
+
+// Manager-heavy item average (Q04, Q05, Q06, Q07, Q11)
+// Gallup: these items are most sensitive to manager quality
+Manager Items Avg =
+AVERAGEX(
+    EngagementData,
+    (EngagementData[q04]
+     + EngagementData[q05]
+     + EngagementData[q06]
+     + EngagementData[q07]
+     + EngagementData[q11]) / 5
+)
+
+
+// Environment and clarity item average (Q01, Q02, Q03, Q08, Q09)
+Environment Items Avg =
+AVERAGEX(
+    EngagementData,
+    (EngagementData[q01]
+     + EngagementData[q02]
+     + EngagementData[q03]
+     + EngagementData[q08]
+     + EngagementData[q09]) / 5
+)
+
+
+// Growth and belonging item average (Q10, Q11, Q12)
+Growth Items Avg =
+AVERAGEX(
+    EngagementData,
+    (EngagementData[q10]
+     + EngagementData[q11]
+     + EngagementData[q12]) / 3
+)
+
+
+// Item gap vs. scale maximum (5.0) — shows headroom
+Q04 Gap to Max =
+5.0 - [Q04 Avg]
+
+Q07 Gap to Max =
+5.0 - [Q07 Avg]
+
+Q10 Gap to Max =
+5.0 - [Q10 Avg]
+
+
+// ============================================================
+// PAGE 4: MANAGER AND FLIGHT RISK ANALYSIS
+// Manager-level team engagement scores and flight risk concentration
+// Gallup: manager accounts for 70% of team engagement variance
+// ============================================================
+
+// Average Q12 score for the selected manager's team
+Manager Team Avg Q12 =
+CALCULATE(
+    AVERAGE(EngagementData[avg_q12_score]),
+    ALLSELECTED(EngagementData[manager_id])
+)
+
+
+// Manager quality score (inherent leadership capability signal)
+Avg Manager Quality =
+AVERAGE(EngagementData[manager_quality])
+
+
+// Flight risk count per manager
+Manager Flight Risk Count =
+CALCULATE(
+    COUNTROWS(EngagementData),
+    EngagementData[flight_risk_flag] = 1,
+    ALLSELECTED(EngagementData[manager_id])
+)
+
+
+// Manager engagement rank (1 = lowest-performing team)
+Manager Engagement Rank =
+RANKX(
+    ALL(EngagementData[manager_id]),
+    CALCULATE(AVERAGE(EngagementData[avg_q12_score])),
+    ,
+    ASC,
+    Dense
+)
+
+
+// % of flight risk employees concentrated in bottom-quartile managers
+Flight Risk in Bottom Quartile Managers % =
+VAR AllMgrAvg =
+    ADDCOLUMNS(
+        VALUES(EngagementData[manager_id]),
+        "TeamAvg", CALCULATE(AVERAGE(EngagementData[avg_q12_score]))
+    )
+VAR Threshold =
+    PERCENTILE.INC(SELECTCOLUMNS(AllMgrAvg, "TeamAvg", [TeamAvg]), 0.25)
+RETURN
+DIVIDE(
+    CALCULATE(
+        COUNTROWS(EngagementData),
+        EngagementData[flight_risk_flag] = 1,
+        CALCULATE(AVERAGE(EngagementData[avg_q12_score])) <= Threshold
+    ),
+    [Flight Risk Count]
+) * 100
+
+
+// ============================================================
+// PAGE 5: BUSINESS IMPACT
+// Connects engagement scores to absenteeism, performance, and eNPS
+// Gallup benchmarks: 81% lower absenteeism for engaged employees
+// ============================================================
+
+// Absenteeism for Engaged segment
+Engaged Avg Absence =
+CALCULATE(
+    AVERAGE(EngagementData[absence_days]),
+    EngagementData[engagement_segment] = "Engaged"
+)
+
+
+// Absenteeism for Actively Disengaged segment
+Disengaged Avg Absence =
+CALCULATE(
+    AVERAGE(EngagementData[absence_days]),
+    EngagementData[engagement_segment] = "Actively Disengaged"
+)
+
+
+// Absenteeism reduction potential (engaged vs. disengaged)
+Absence Reduction Potential % =
+DIVIDE(
+    [Disengaged Avg Absence] - [Engaged Avg Absence],
+    [Disengaged Avg Absence]
+) * 100
+
+
+// Average performance rating by segment
+Segment Avg Performance =
+CALCULATE(
+    AVERAGE(EngagementData[performance_rating]),
+    ALLSELECTED(EngagementData[engagement_segment])
+)
+
+
+// eNPS — % Promoters minus % Detractors
+eNPS Score =
+VAR Promoters =
+    CALCULATE(
+        COUNTROWS(EngagementData),
+        EngagementData[enps_segment] = "Promoter"
+    )
+VAR Detractors =
+    CALCULATE(
+        COUNTROWS(EngagementData),
+        EngagementData[enps_segment] = "Detractor"
+    )
+RETURN
+DIVIDE(Promoters - Detractors, [Total Headcount]) * 100
+
+
+// Promoter %
+Promoter % =
+DIVIDE(
+    CALCULATE(
+        COUNTROWS(EngagementData),
+        EngagementData[enps_segment] = "Promoter"
+    ),
+    [Total Headcount]
+) * 100
+
+
+// Detractor %
+Detractor % =
+DIVIDE(
+    CALCULATE(
+        COUNTROWS(EngagementData),
+        EngagementData[enps_segment] = "Detractor"
+    ),
+    [Total Headcount]
+) * 100
+
+
+// ============================================================
+// SUPPORTING MEASURES — USED ACROSS MULTIPLE PAGES
+// ============================================================
+
+// Engagement score colour band for conditional formatting
+// Returns "High", "Medium", or "Low"
+Engagement Score Band =
+SWITCH(
+    TRUE(),
+    [Overall Avg Q12] >= 4.0, "High",
+    [Overall Avg Q12] >= 2.5, "Medium",
+    "Low"
+)
+
+
+// Tenure band label — used for x-axis on tenure-engagement curve
+Tenure Band =
+SWITCH(
+    TRUE(),
+    MAX(EngagementData[years_tenure]) < 0.5,  "0-6 months",
+    MAX(EngagementData[years_tenure]) < 1.0,  "6-12 months",
+    MAX(EngagementData[years_tenure]) < 2.0,  "1-2 years",
+    MAX(EngagementData[years_tenure]) < 5.0,  "2-5 years",
+    MAX(EngagementData[years_tenure]) < 10.0, "5-10 years",
+    "10+ years"
+)
+
+
+// Dynamic page title
+Dynamic Title =
+"Engagement Summary: "
+    & IF(
+        ISFILTERED(EngagementData[department]),
+        SELECTEDVALUE(EngagementData[department], "Multiple Departments"),
+        "All Departments"
+    )
